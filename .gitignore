@@ -9,3 +9,4 @@
 !*.h
 !*.hpp
 !*makefile
+*test.cpp
