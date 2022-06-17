@@ -13,6 +13,12 @@
 #define INF 0x7EFFFFFF
 #define WINNING_POINT 1000000
 
+// utility
+#define DEBUG 1
+#define VALUE_FUNCTION 0
+#define CHECK_INIT 1
+#define CHECK_MM 0
+
 const int MY_POINT[]{
     5*WINNING_POINT,   // 0 FIVE         ooooo
     WINNING_POINT,     // 1 FOUR_LIVE   _oooo_
@@ -30,15 +36,9 @@ const int OPP_POINT[]{
     5*WINNING_POINT,   // 2 FOUR_DEAD1  _xxxxo
     100000,            // 3 THREE_LIVE  _xxx_
     100,               // 4 THREE_DEAD1 _xxxo
-    120,              // 5 TWO_LIVE    _xx_
-    50,               // 6 TWO_DEAD1   _xxo
+    120,               // 5 TWO_LIVE    _xx_
+    50,                // 6 TWO_DEAD1   _xxo
 };
-
-// utility
-#define DEBUG 1
-#define VALUE_FUNCTION 0
-#define CHECK_INIT 1
-#define CHECK_MM
 
 
 enum SPOT_STATE {
