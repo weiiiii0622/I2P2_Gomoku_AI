@@ -4,20 +4,22 @@
 #include <ctime>
 #include <array>
 
+#include <list>
 #include <set>
 #include <utility>
 
 // constant
 #define SIZE 15
-#define DEPTH 3
+#define DEPTH 4
 #define INF 0x7EFFFFFF
-#define WINNING_POINT 1000000
+#define WINNING_POINT 10000000
 
 // utility
 #define DEBUG 1
 #define VALUE_FUNCTION 0
 #define CHECK_INIT 1
 #define CHECK_MM 0
+#define CHECK_VP 0
 
 // global variables
 int player;
@@ -34,26 +36,29 @@ int evaluate_cont_score(int dead, int cont, bool my_turn);
 int evaluate_horizontal(const std::array<std::array<int, SIZE>, SIZE>& board, int myColor);
 int evaluate_vertical(const std::array<std::array<int, SIZE>, SIZE>& board, int myColor);
 int evaluate_diagonal(const std::array<std::array<int, SIZE>, SIZE>& board, int myColor);
+int evaluate_point(const std::array<std::array<int, SIZE>, SIZE>& board, int x, int y, int color);
+int getPointScore(int mid_cnt, int l_cnt, int r_cnt, int l_dead, int r_dead);
 
 const float MY_POINT[]{
-    5*WINNING_POINT,     // 0 FIVE         ooooo
-    WINNING_POINT,       // 1 FOUR_LIVE   _oooo_
-    100,                 // 2 FOUR_DEAD1  _oooox
-    50000,               // 3 THREE_LIVE  _ooo_
+    WINNING_POINT,       // 0 FIVE         ooooo
+    100000,              // 1 FOUR_LIVE   _oooo_
+    500,               // 2 FOUR_DEAD1  _oooox
+    1000,                // 3 THREE_LIVE  _ooo_
     100,                 // 4 THREE_DEAD1 _ooox
     100,                 // 5 TWO_LIVE    _oo_
     10,                  // 6 TWO_DEAD1   _oox
-    5,                   // 7 ONE_LIVE    _o_ 
+    10,                  // 7 ONE_LIVE    _o_ 
 };
 
 const float OPP_POINT[]{
-    5*WINNING_POINT,     // 0 FIVE         xxxxx
-    5*WINNING_POINT,     // 1 FOUR_LIVE   _xxxx_
-    5*WINNING_POINT,     // 2 FOUR_DEAD1  _xxxxo
-    100000,              // 3 THREE_LIVE  _xxx_
-    1000,                // 4 THREE_DEAD1 _xxxo
-    120,                 // 5 TWO_LIVE    _xx_
-    50,                  // 6 TWO_DEAD1   _xxo
+    WINNING_POINT,       // 0 FIVE         ooooo
+    100000,              // 1 FOUR_LIVE   _oooo_
+    500,               // 2 FOUR_DEAD1  _oooox
+    1000,                // 3 THREE_LIVE  _ooo_
+    100,                 // 4 THREE_DEAD1 _ooox
+    100,                 // 5 TWO_LIVE    _oo_
+    10,                  // 6 TWO_DEAD1   _oox
+    10,                  // 7 ONE_LIVE    _o_ 
 };
 
 
@@ -98,6 +103,7 @@ struct SET_POINT_CMP{
         return 0;
     }
 };
+
 struct SET_POINT_HEURISTIC_CMP{
     bool operator()(const Point &lhs, const Point &rhs){
         //return lhs.h >= rhs.h;
@@ -168,21 +174,86 @@ public:
             }
         }
     }
-
-    std::set<Point, SET_POINT_HEURISTIC_CMP> generatePossibleMoves(){
-        std::set<Point, SET_POINT_HEURISTIC_CMP> possibleMoves;
+    // std::set<Point, SET_POINT_HEURISTIC_CMP>
+    std::list<Point> generatePossibleMoves(int color){
+        std::list<Point> possibleMoves;
+        std::list<Point> Fives;
+        std::list<Point> myFours, oppFours;
+        std::list<Point> myDFours, oppDFours;
+        std::list<Point> myTwoThrees, oppTwoThrees;
+        std::list<Point> myThrees, oppThrees;
+        std::list<Point> myTwos, oppTwos;
+        std::list<Point> others;
         for(int i=0; i<SIZE; i++){
             for(int j=0; j<SIZE; j++){
                 if(board[i][j]>0) continue;
                 if(checkSurrounding(board, i, j)){
-                    //if(DEBUG) std::cout << "{" << i <<',' << j << "}, "; 
+                    //if(CHECK_VP) std::cout << "{" << i <<',' << j << "}, "; 
                     Point step(i,j);
-                    // board[i][j] = myColor;
-                    // step.h = getScore(true, myColor);
-                    // board[i][j] = 0;
-                    possibleMoves.insert(step);
+                    int myPointScore = evaluate_point(board, i, j, color);
+                    int oppPointScore = evaluate_point(board, i, j, 3-color);
+                    if(CHECK_VP) std::cout << "myScore: " << myPointScore << " oppScore:: " << oppPointScore << '\n';
+                    if(myPointScore >= MY_POINT[0]){
+                        Fives.push_back(step);
+                        break;
+                    } else if(oppPointScore >= OPP_POINT[0]){
+                        Fives.push_back(step);
+                    } else if(myPointScore >= MY_POINT[1]){
+                        myFours.push_back(step);
+                    } else if(oppPointScore >= OPP_POINT[1]){
+                        oppFours.push_back(step);
+                    } else if(myPointScore >= MY_POINT[2]){
+                        myDFours.push_back(step);
+                    } else if(oppPointScore >= OPP_POINT[2]){
+                        oppFours.push_back(step);
+                    } else if(myPointScore >= 2*MY_POINT[3]){
+                        myTwoThrees.push_back(step);
+                    } else if(oppPointScore >= 2*OPP_POINT[3]){
+                        oppTwoThrees.push_back(step);
+                    } else if(myPointScore >= MY_POINT[3]){
+                        myThrees.push_back(step);
+                    } else if(oppPointScore >= OPP_POINT[3]){
+                        oppThrees.push_back(step);
+                    } else if(myPointScore >= MY_POINT[5]){
+                        myTwos.push_back(step);
+                    } else if(oppPointScore >= OPP_POINT[5]){
+                        oppTwos.push_back(step);
+                    } else{
+                        others.push_back(step);
+                    }
+                    //possibleMoves.push_back(step);
                 }
             }
+        }
+        // Immediate Win or Prevent Lose
+        if(Fives.size()){
+            return Fives;
+        }
+        // Live Four >> all
+        if(color == player && myFours.size()) return myFours;
+        if(color == 3-player && oppFours.size()) return oppFours;
+
+        if(color == player){
+            myTwoThrees.splice(myTwoThrees.end(), oppTwoThrees);
+            myTwoThrees.splice(myTwoThrees.end(), myDFours);
+            myTwoThrees.splice(myTwoThrees.end(), oppDFours);
+            myTwoThrees.splice(myTwoThrees.end(), myThrees);
+            myTwoThrees.splice(myTwoThrees.end(), oppThrees);
+            myTwoThrees.splice(myTwoThrees.end(), myTwos);
+            myTwoThrees.splice(myTwoThrees.end(), oppTwos);
+            myTwoThrees.splice(myTwoThrees.end(), others);
+            possibleMoves = myTwoThrees;
+        }
+        else{
+            oppTwoThrees.splice(myTwoThrees.end(), myTwoThrees);
+            oppTwoThrees.splice(myTwoThrees.end(), oppDFours);
+            oppTwoThrees.splice(myTwoThrees.end(), myDFours);
+            oppTwoThrees.splice(myTwoThrees.end(), oppThrees);
+            oppTwoThrees.splice(myTwoThrees.end(), myThrees);
+            oppTwoThrees.splice(myTwoThrees.end(), oppTwos);
+            oppTwoThrees.splice(myTwoThrees.end(), myTwos);
+            oppTwoThrees.splice(oppTwoThrees.end(), others);
+            possibleMoves = oppTwoThrees;
         }
         //if(DEBUG) std::cout << '\n';
         return possibleMoves;
@@ -226,7 +297,7 @@ void write_valid_spot(std::ofstream& fout, State& state, int player) {
     int init_score = state.getScore(true, player);
     if(DEBUG) std::cout << "Initial Score: " << init_score << '\n';
 
-    std::set<Point, SET_POINT_HEURISTIC_CMP> possibleMoves = state.generatePossibleMoves();
+    std::list<Point> possibleMoves = state.generatePossibleMoves(player);
     
     if(possibleMoves.size()==0){
         fout << SIZE/2 << " " << SIZE/2 << '\n';
@@ -235,7 +306,6 @@ void write_valid_spot(std::ofstream& fout, State& state, int player) {
     }
 
     Point move = getNextMove(fout, state);
-
     if(DEBUG) std::cout << "Final Move: {" << move[0] <<  "," << move[1] << "}\n";
     fout << move[0] << " " << move[1] << '\n';
     fout.flush();
@@ -516,7 +586,350 @@ int evaluate_diagonal(const std::array<std::array<int, SIZE>, SIZE>& board, int 
 
 // Point Heuristic
 int evaluate_point(const std::array<std::array<int, SIZE>, SIZE>& board, int x, int y, int color){
+    int score = 0;
+    int l_dead, r_dead;
+    int mid_cnt, l_cnt, r_cnt;
+    int empty;
 
+    // horizontal
+    l_dead = r_dead = 0; mid_cnt = 1; l_cnt = r_cnt = 0; empty = 0;
+    for(int j=y-1; ; j--){
+
+        if(j<0){
+            l_dead = 1;
+            break;
+        }
+
+        char c = board[x][j];
+        if(c == color){
+            if(empty == 0){
+                mid_cnt += 1;
+            }
+            else{
+                l_cnt += 1;
+            }
+        }
+        else if(c == 0){
+            if(empty == 0){
+                empty = 1;
+            }
+            else{
+                break;
+            }
+        }
+        else if(c == 3-color){
+            l_dead = 1;
+            break;
+        }  
+    }
+    empty = 0;
+    for(int j=y+1; ; j++){
+
+        if(j>=SIZE){
+            r_dead = 1;
+            break;
+        }
+
+        char c = board[x][j];
+        if(c == color){
+            if(empty == 0){
+                mid_cnt += 1;
+            }
+            else{
+                r_cnt += 1;
+            }
+        }
+        else if(c == 0){
+            if(empty == 0){
+                empty = 1;
+            }
+            else{
+                break;
+            }
+        }
+        else if(c == 3-color){
+            r_dead = 1;
+            break;
+        }  
+    }
+    if(CHECK_VP) std::cout << "{"<<x<<","<<y<<"} " << "mid: " <<mid_cnt << " l: " << l_cnt << " r: "<<r_cnt <<" empty:"<<empty<<" l_dead: "<<l_dead<< " r_dead: "<<r_dead<<'\n';
+    score += getPointScore(mid_cnt, l_cnt, r_cnt, l_dead, r_dead);
+
+    // vertical
+    l_dead = r_dead = 0; mid_cnt = 1; l_cnt = r_cnt = 0; empty = 0;
+    for(int i=x-1; ; i--){
+
+        if(i<0){
+            l_dead = 1;
+            break;
+        }
+
+        char c = board[i][y];
+        if(c == color){
+            if(empty == 0){
+                mid_cnt += 1;
+            }
+            else{
+                l_cnt += 1;
+            }
+        }
+        else if(c == 0){
+            if(empty == 0){
+                empty = 1;
+            }
+            else{
+                break;
+            }
+        }
+        else if(c == 3-color){
+            l_dead = 1;
+            break;
+        }  
+    }
+    empty = 0;
+    for(int i=x+1; ; i++){
+
+        if(i>=SIZE){
+            r_dead = 1;
+            break;
+        }
+
+        char c = board[i][y];
+        if(c == color){
+            if(empty == 0){
+                mid_cnt += 1;
+            }
+            else{
+                r_cnt += 1;
+            }
+        }
+        else if(c == 0){
+            if(empty == 0){
+                empty = 1;
+            }
+            else{
+                break;
+            }
+        }
+        else if(c == 3-color){
+            r_dead = 1;
+            break;
+        }  
+    }
+
+    if(CHECK_VP) std::cout << "{"<<x<<","<<y<<"} " << "mid: " <<mid_cnt << " l: " << l_cnt << " r: "<<r_cnt <<" empty:"<<empty<<" l_dead: "<<l_dead<< " r_dead: "<<r_dead<<'\n';
+    score += getPointScore(mid_cnt, l_cnt, r_cnt, l_dead, r_dead);
+
+    // top-left to bottom-right
+    l_dead = r_dead = 0; mid_cnt = 1; l_cnt = r_cnt = 0; empty = 0;
+    for(int k=1; ; k++){
+        int nx = x-k, ny = y-k;
+        if(nx<0 || ny<0){
+            l_dead = 1;
+            break;
+        }
+
+        char c = board[nx][ny];
+        if(c == color){
+            if(empty == 0){
+                mid_cnt += 1;
+            }
+            else{
+                l_cnt += 1;
+            }
+        }
+        else if(c == 0){
+            if(empty == 0){
+                empty = 1;
+            }
+            else{
+                break;
+            }
+        }
+        else if(c == 3-color){
+            l_dead = 1;
+            break;
+        }  
+    }
+    empty = 0;
+    for(int k=1; ; k++){
+        int nx = x+k, ny = y+k;
+        if(nx>=SIZE || ny>=SIZE){
+            r_dead = 1;
+            break;
+        }
+
+        char c = board[nx][ny];
+        if(c == color){
+            if(empty == 0){
+                mid_cnt += 1;
+            }
+            else{
+                r_cnt += 1;
+            }
+        }
+        else if(c == 0){
+            if(empty == 0){
+                empty = 1;
+            }
+            else{
+                break;
+            }
+        }
+        else if(c == 3-color){
+            r_dead = 1;
+            break;
+        }  
+    }
+    if(CHECK_VP) std::cout << "{"<<x<<","<<y<<"} " << "mid: " <<mid_cnt << " l: " << l_cnt << " r: "<<r_cnt <<" empty:"<<empty<<" l_dead: "<<l_dead<< " r_dead: "<<r_dead<<'\n';
+    score += getPointScore(mid_cnt, l_cnt, r_cnt, l_dead, r_dead);
+
+    // top-right to bottom-left
+    l_dead = r_dead = 0; mid_cnt = 1; l_cnt = r_cnt = 0; empty = 0;
+    for(int k=1; ; k++){
+        int nx = x+k, ny = y-k;
+        if(nx>=SIZE || ny<0){
+            l_dead = 1;
+            break;
+        }
+
+        char c = board[nx][ny];
+        if(c == color){
+            if(empty == 0){
+                mid_cnt += 1;
+            }
+            else{
+                l_cnt += 1;
+            }
+        }
+        else if(c == 0){
+            if(empty == 0){
+                empty = 1;
+            }
+            else{
+                break;
+            }
+        }
+        else if(c == 3-color){
+            l_dead = 1;
+            break;
+        }  
+    }
+    empty = 0;
+    for(int k=1; ; k++){
+        int nx = x-k, ny = y+k;
+        if(nx<0 || ny>=SIZE){
+            r_dead = 1;
+            break;
+        }
+
+        char c = board[nx][ny];
+        if(c == color){
+            if(empty == 0){
+                mid_cnt += 1;
+            }
+            else{
+                r_cnt += 1;
+            }
+        }
+        else if(c == 0){
+            if(empty == 0){
+                empty = 1;
+            }
+            else{
+                break;
+            }
+        }
+        else if(c == 3-color){
+            r_dead = 1;
+            break;
+        }  
+    }
+    if(CHECK_VP) std::cout << "{"<<x<<","<<y<<"} " << "mid: " <<mid_cnt << " l: " << l_cnt << " r: "<<r_cnt <<" empty:"<<empty<<" l_dead: "<<l_dead<< " r_dead: "<<r_dead<<'\n';
+    score += getPointScore(mid_cnt, l_cnt, r_cnt, l_dead, r_dead);
+
+    return score;
+}
+
+int getPointScore(int mid_cnt, int l_cnt, int r_cnt, int l_dead, int r_dead){
+    
+    if(mid_cnt >= 5) return MY_POINT[0]; // WIN
+    if(mid_cnt >= 4 && (l_dead==0&&r_dead==0 || l_cnt&&r_cnt || l_cnt&&!r_dead || r_cnt&&!l_dead)) return MY_POINT[0];
+    if(l_cnt==0 && r_cnt==0){
+        int dead = l_dead+r_dead;
+        if(dead==0){
+            switch(mid_cnt){
+                case 4: return MY_POINT[1];
+                case 3: return MY_POINT[3];
+                case 2: return MY_POINT[5];
+                case 1: return MY_POINT[7];
+            }
+        }
+        else if(dead==1){
+            switch(mid_cnt){
+                case 4: return MY_POINT[2];
+                case 3: return MY_POINT[4];
+                case 2: return MY_POINT[6];
+            }
+        }
+        return 0;
+    }
+
+    int cnt, dead;
+    if(l_cnt>r_cnt) {
+        cnt = l_cnt+mid_cnt;
+        if(r_cnt==0){
+            dead = l_dead+r_dead;
+        }
+        else{
+            dead = l_dead;
+        }
+    }
+    else{
+        cnt = r_cnt+mid_cnt; 
+        if(l_cnt==0){
+            dead = l_dead+r_dead;
+        }
+        else{
+            dead = r_dead;
+        }
+    }
+
+    if(dead==0){
+        switch (cnt){
+            case 8:                     // _oooo_oooo_ 
+            case 7: return MY_POINT[0]; // _oooo_ooo_
+            case 6:                     // _ooo_ooo_
+            case 5:                     // _ooo_oo_ 
+            case 4: return MY_POINT[2]; // _oo_oo_ ...
+            case 3: return MY_POINT[3]; // _oo_o_ ... !!!!!!!
+            case 2: return MY_POINT[6]; // _o_o_
+        }
+    }
+    else if(dead==1){
+        switch (cnt){
+            case 8: return MY_POINT[0]; // _oooo_oooox 
+            case 7: return MY_POINT[1]; // _oooo_ooox ...
+            case 6:                     // _ooo_ooox ...
+            case 5:                     // _ooo_oox ...
+            case 4: return MY_POINT[4]; // _oo_oox ...
+            case 3: return MY_POINT[6]; // _oo_ox ...
+            case 2: return MY_POINT[7]; // _o_ox
+        }        
+    }
+    else{
+        switch (cnt){
+            case 8:                     // xoooo_oooox 
+            case 7:                     // xoooo_ooox ...
+            case 6:                     // xooo_ooox ...
+            case 5:                     // xooo_oox ...
+            case 4: return MY_POINT[2]; // xoo_oox ...
+            case 3:                     // xoo_ox ...
+            case 2: return 0;           // xo_ox
+        }                
+    }
+
+    return 0;
 }
 
 Point getInitMove(State& state){
@@ -525,7 +938,7 @@ Point getInitMove(State& state){
     Point winningMove;
     Point preventLosingMove;
     int preventLosePoint = 0;
-    std::set<Point, SET_POINT_HEURISTIC_CMP> possibleMoves = state.generatePossibleMoves();
+    std::list<Point> possibleMoves = state.generatePossibleMoves(state.myColor);
     for(auto move : possibleMoves){
 
         // Immediate Win
@@ -565,34 +978,28 @@ Point getInitMove(State& state){
 Point getNextMove(std::ofstream& fout, State& state){
     Point bestMove;
     int bestScore = -INF;
-    //Point InitMove;
-    Point InitMove = getInitMove(state);
+    Point InitMove;
 
-    if(InitMove[0] != -1 && InitMove[1] != -1){
-        bestMove = InitMove;
+    if(CHECK_MM) std::cout << "Begin minimaxing\n";
+    std::list<Point> possibleMoves = state.generatePossibleMoves(player);
+    int cnt = 0;
+    for(auto move: possibleMoves){
+        //if(cnt>=30) break;
+        cnt++;
+        State temp_state(state);
+        //if(DEBUG) std::cout << "Move: {" << move[0]<< ',' << move[1] << "}";
+        temp_state.put_stone(move[0], move[1], true);
+        if(DEBUG) std::cout << "Move: {" << move[0]<< ',' << move[1] << "} ";
+        int v = minimaxAB(temp_state, DEPTH-1, -INF, INF, false, fout);
+        if(DEBUG) std::cout << " --> final score: " << v << '\n';
+        if(v > bestScore){
+            bestScore = v;
+            bestMove = move;
+        }
     }
-    else{
-        //if(CHECK_MM) std::cout << "Begin minimaxing\n";
-        std::set<Point, SET_POINT_HEURISTIC_CMP> possibleMoves = state.generatePossibleMoves();
-        int cnt = 0;
-        for(auto move: possibleMoves){
-            //if(cnt>=30) break;
-            cnt++;
-            State temp_state(state);
-            //if(DEBUG) std::cout << "Move: {" << move[0]<< ',' << move[1] << "} score: " << move.h << '\n';
-            temp_state.put_stone(move[0], move[1], true);
-
-            int v = minimaxAB(temp_state, DEPTH-1, -INF, INF, false, fout);
-            //if(DEBUG) std::cout << "Move: {" << move[0]<< ',' << move[1] << "} final score: " << v << '\n';
-            if(v > bestScore){
-                bestScore = v;
-                bestMove = move;
-            }
-        }
-        if(bestMove != Point(-1,-1)){
-            if(DEBUG) std::cout << "BestScore: " << bestScore << '\n';
-            if(DEBUG) std::cout << "BestMove: {" << bestMove[0] <<  "," << bestMove[1] << "}\n";
-        }
+    if(bestMove != Point(-1,-1)){
+        if(DEBUG) std::cout << "BestScore: " << bestScore << '\n';
+        if(DEBUG) std::cout << "BestMove: {" << bestMove[0] <<  "," << bestMove[1] << "}\n";
     }
 
     return bestMove;
@@ -600,9 +1007,9 @@ Point getNextMove(std::ofstream& fout, State& state){
 
 int minimaxAB(State state, int depth, int alpha, int beta, bool maxPlayer, std::ofstream& fout){
     if(depth == 0){
-        if(CHECK_MM) std::cout << "Look for " << state.myColor << '\n';
+        //if(CHECK_MM) std::cout << "Look for " << state.myColor << '\n';
         int finalScore = state.getScore(true, state.myColor);
-        //if(CHECK_MM) std::cout<< "Score: " << finalScore << "\n";
+        if(CHECK_MM) std::cout<< "Score: " << finalScore << "\n";
         return finalScore;
         
     }
@@ -610,7 +1017,7 @@ int minimaxAB(State state, int depth, int alpha, int beta, bool maxPlayer, std::
     if(maxPlayer){
         //if(CHECK_MM) std::cout << "Maxmizing...\n";
         
-        std::set<Point, SET_POINT_HEURISTIC_CMP> possibleMoves = state.generatePossibleMoves();
+        std::list<Point> possibleMoves = state.generatePossibleMoves(player);
 
         int v = -INF;
         
@@ -629,12 +1036,13 @@ int minimaxAB(State state, int depth, int alpha, int beta, bool maxPlayer, std::
                 break;
             }
         }
+        if(CHECK_MM) std::cout<< "depth: "<<depth << " v: " << v<< "\n";
         return v;
     }
     else{
         //if(CHECK_MM) std::cout << "Minimizing...\n";
         
-        std::set<Point, SET_POINT_HEURISTIC_CMP> possibleMoves = state.generatePossibleMoves();
+        std::list<Point> possibleMoves = state.generatePossibleMoves(3-player);
 
         int v = INF;
         
@@ -653,6 +1061,7 @@ int minimaxAB(State state, int depth, int alpha, int beta, bool maxPlayer, std::
                 break;
             }
         }
+        if(CHECK_MM) std::cout<< "depth: "<<depth << " v: " << v<< "\n";
         return v;
     }
 }
