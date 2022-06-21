@@ -6,7 +6,7 @@
 #include <vector>
 #include <cassert>
 
-#define TIMEOUT 10
+#define TIMEOUT 7
 
 struct Point {
     int x, y;

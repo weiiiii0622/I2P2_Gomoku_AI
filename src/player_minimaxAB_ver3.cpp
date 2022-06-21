@@ -10,7 +10,7 @@
 
 // constant
 #define SIZE 15
-#define DEPTH 4
+#define DEPTH 1
 #define INF 0x7EFFFFFF
 #define WINNING_POINT 10000000
 
@@ -41,25 +41,25 @@ int evaluate_point(const std::array<std::array<int, SIZE>, SIZE>& board, int x, 
 int getPointScore(int mid_cnt, int l_cnt, int r_cnt, int l_dead, int r_dead);
 
 const float MY_POINT[]{
-    WINNING_POINT,       // 0 FIVE         ooooo
-    100000,              // 1 FOUR_LIVE   _oooo_
-    10000,               // 2 FOUR_DEAD1  _oooox
-    2000,                // 3 THREE_LIVE  _ooo_
-    100,                 // 4 THREE_DEAD1 _ooox
-    100,                 // 5 TWO_LIVE    _oo_
+    1000000,            // 0 FIVE         ooooo
+    50000,              // 1 FOUR_LIVE   _oooo_
+    400,                // 2 FOUR_DEAD1  _oooox
+    400,                // 3 THREE_LIVE  _ooo_
+    20,                 // 4 THREE_DEAD1 _ooox
+    20,                 // 5 TWO_LIVE    _oo_
     1,                  // 6 TWO_DEAD1   _oox
-    10,                  // 7 ONE_LIVE    _o_ 
+    1,                  // 7 ONE_LIVE    _o_ 
 };
 
 const float OPP_POINT[]{
-    WINNING_POINT,       // 0 FIVE         ooooo
-    100000,              // 1 FOUR_LIVE   _oooo_
-    10000,               // 2 FOUR_DEAD1  _oooox
-    4000,                // 3 THREE_LIVE  _ooo_
-    100,                 // 4 THREE_DEAD1 _ooox
-    100,                 // 5 TWO_LIVE    _oo_
-    5,                  // 6 TWO_DEAD1   _oox
-    10,                  // 7 ONE_LIVE    _o_ 
+    10000000,           // 0 FIVE         ooooo
+    100000,             // 1 FOUR_LIVE   _oooo_
+    100000,             // 2 FOUR_DEAD1  _oooox
+    8000,               // 3 THREE_LIVE  _ooo_
+    50,                 // 4 THREE_DEAD1 _ooox
+    50,                 // 5 TWO_LIVE    _oo_
+    3,                  // 6 TWO_DEAD1   _oox
+    3,                  // 7 ONE_LIVE    _o_ 
 };
 
 int positionWeight[15][15] = { 
@@ -332,11 +332,11 @@ void write_valid_spot(std::ofstream& fout, State& state, int player) {
         fout.flush();
         return;
     }
-
-    Point move = getNextMove(fout, state);
-    if(DEBUG) std::cout << "Final Move: {" << move[0] <<  "," << move[1] << "}\n";
-    fout << move[0] << " " << move[1] << '\n';
-    fout.flush();
+        Point move = getNextMove(fout, state);
+        if(DEBUG) std::cout << "Final Move: {" << move[0] <<  "," << move[1] << "}\n";
+        fout << move[0] << " " << move[1] << '\n';
+        fout.flush();
+    
 
     return;
 }
