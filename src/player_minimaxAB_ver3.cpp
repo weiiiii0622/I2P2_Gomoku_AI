@@ -10,7 +10,7 @@
 
 // constant
 #define SIZE 15
-#define DEPTH 1
+#define DEPTH 3
 #define INF 0x7EFFFFFF
 #define WINNING_POINT 10000000
 
@@ -30,6 +30,8 @@ std::array<std::array<int, SIZE>, SIZE> board;
 // non-member function
 struct Point;
 class State;
+void write_valid_spot(std::ofstream& fout, State& state, int player);
+void read_board(std::ifstream& fin);
 Point getWinningMove(State& state);
 Point getNextMove(std::ofstream& fout, State& state);
 int minimaxAB(State state, int depth, int alpha, int beta, bool maxPlayer, std::ofstream& fout);
@@ -44,7 +46,7 @@ const float MY_POINT[]{
     1000000,            // 0 FIVE         ooooo
     50000,              // 1 FOUR_LIVE   _oooo_
     400,                // 2 FOUR_DEAD1  _oooox
-    400,                // 3 THREE_LIVE  _ooo_
+    1000,               // 3 THREE_LIVE  _ooo_
     20,                 // 4 THREE_DEAD1 _ooox
     20,                 // 5 TWO_LIVE    _oo_
     1,                  // 6 TWO_DEAD1   _oox
@@ -55,9 +57,9 @@ const float OPP_POINT[]{
     10000000,           // 0 FIVE         ooooo
     100000,             // 1 FOUR_LIVE   _oooo_
     100000,             // 2 FOUR_DEAD1  _oooox
-    8000,               // 3 THREE_LIVE  _ooo_
+    20000,              // 3 THREE_LIVE  _ooo_
     50,                 // 4 THREE_DEAD1 _ooox
-    50,                 // 5 TWO_LIVE    _oo_
+    1000,               // 5 TWO_LIVE    _oo_
     3,                  // 6 TWO_DEAD1   _oox
     3,                  // 7 ONE_LIVE    _o_ 
 };
@@ -332,11 +334,11 @@ void write_valid_spot(std::ofstream& fout, State& state, int player) {
         fout.flush();
         return;
     }
-        Point move = getNextMove(fout, state);
-        if(DEBUG) std::cout << "Final Move: {" << move[0] <<  "," << move[1] << "}\n";
-        fout << move[0] << " " << move[1] << '\n';
-        fout.flush();
-    
+
+    Point move = getNextMove(fout, state);
+    if(DEBUG) std::cout << "Final Move: {" << move[0] <<  "," << move[1] << "}\n";
+    fout << move[0] << " " << move[1] << '\n';
+    fout.flush();
 
     return;
 }
@@ -1019,7 +1021,11 @@ Point getNextMove(std::ofstream& fout, State& state){
         //if(DEBUG) std::cout << "Move: {" << move[0]<< ',' << move[1] << "}";
         temp_state.put_stone(move[0], move[1], true);
         if(DEBUG) std::cout << "Get Move: {" << move[0]<< ',' << move[1] << "} ";
-        int v = minimaxAB(temp_state, DEPTH-1, -INF, INF, false, fout) + evaluate_point(temp_state.board, move[0], move[1], 3-player);
+        //int v = minimaxAB(temp_state, DEPTH-1, -INF, INF, false, fout) + evaluate_point(temp_state.board, move[0], move[1], 3-player);
+        int depth;
+        if(player==1) depth = 2;
+        else if(player == 2) depth = 3;
+        int v = minimaxAB(temp_state, depth-1, -INF, INF, false, fout);
         if(DEBUG) std::cout << " --> final score: " << v << '\n';
         if(v > bestScore && v<=INF){
             bestScore = v;

@@ -30,6 +30,8 @@ std::array<std::array<int, SIZE>, SIZE> board;
 // non-member function
 struct Point;
 class State;
+void write_valid_spot(std::ofstream& fout, State& state, int player);
+void read_board(std::ifstream& fin);
 Point getWinningMove(State& state);
 Point getNextMove(std::ofstream& fout, State& state);
 int minimaxAB(State state, int depth, int alpha, int beta, bool maxPlayer, std::ofstream& fout);
@@ -1020,6 +1022,7 @@ Point getNextMove(std::ofstream& fout, State& state){
         temp_state.put_stone(move[0], move[1], true);
         if(DEBUG) std::cout << "Get Move: {" << move[0]<< ',' << move[1] << "} ";
         int v = minimaxAB(temp_state, DEPTH-1, -INF, INF, false, fout) + evaluate_point(temp_state.board, move[0], move[1], 3-player);
+        //int v = minimaxAB(temp_state, DEPTH-1, -INF, INF, false, fout);
         if(DEBUG) std::cout << " --> final score: " << v << '\n';
         if(v > bestScore && v<=INF){
             bestScore = v;
